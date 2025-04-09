@@ -33,6 +33,7 @@ class ProductResource extends JsonResource
             'type'               => $product->type,
             'name'               => $product->name,
             'url_key'            => $product->url_key,
+            'checkout_without_cart' => (bool) $this->checkout_without_cart,
             'price'              => core()->convertPrice($productTypeInstance->getMinimalPrice()),
             'formatted_price'    => core()->currency($productTypeInstance->getMinimalPrice()),
             'short_description'  => $product->short_description,
