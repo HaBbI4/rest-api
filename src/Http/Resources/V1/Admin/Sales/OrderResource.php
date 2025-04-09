@@ -106,6 +106,18 @@ class OrderResource extends JsonResource
             'formatted_base_shipping_refunded'        => core()->formatBasePrice($this->base_shipping_refunded),
             'customer'                                => $this->when($this->customer_id, new CustomerResource($this->customer)),
             'channel'                                 => $this->when($this->channel_id, new ChannelResource($this->channel)),
+            'payments'                                => $this->when($this->payments, $this->payments->map(function ($payment) {
+                return [
+                    'id'         => $payment->id,
+                    'order_id'   => $payment->order_id,
+                    'due_date'   => $payment->due_date,
+                    'paid_date'  => $payment->paid_date,
+                    'position'   => $payment->position,
+                    'created_at' => $payment->created_at,
+                    'updated_at' => $payment->updated_at,
+                    'is_paid'    => $payment->isPaid(),
+                    ];
+            })),
             'shipping_address'                        => new OrderAddressResource($this->shipping_address),
             'billing_address'                         => new OrderAddressResource($this->billing_address),
             'items'                                   => OrderItemResource::collection($this->items),
