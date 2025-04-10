@@ -434,6 +434,11 @@ return [
                 'logged-in-success'  => 'Logged in successfully.',
                 'logged-out-success' => 'Logged out successfully.',
                 'update-success'     => 'Your Account has been updated successfully.',
+                'verification-code-sent' => 'Verification code has been sent to your phone',
+                'invalid-verification-code' => 'Invalid verification code',
+                'registration-successful' => 'Registration successful',
+                'phone-not-found' => 'Phone number not found',
+                'customer-not-found' => 'Customer not found',
 
                 'error' => [
                     'credential-error'  => 'The provided credentials are incorrect.',
