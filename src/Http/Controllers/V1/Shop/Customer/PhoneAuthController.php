@@ -2,6 +2,7 @@
 
 namespace Webkul\RestApi\Http\Controllers\V1\Shop\Customer;
 
+use App\Services\PhoneVerificationServiceInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
@@ -12,12 +13,7 @@ use Webkul\RestApi\Http\Resources\V1\Shop\Customer\CustomerResource;
 
 class PhoneAuthController extends CustomerController
 {
-    /**
-     * Verification codes repository
-     *
-     * @var array
-     */
-    protected static $verificationCodes = [];
+    protected $phoneVerificationService;
 
     /**
      * Controller instance.
@@ -26,9 +22,11 @@ class PhoneAuthController extends CustomerController
      */
     public function __construct(
         protected CustomerRepository $customerRepository,
-        protected CustomerGroupRepository $customerGroupRepository
+        protected CustomerGroupRepository $customerGroupRepository,
+        PhoneVerificationServiceInterface $phoneVerificationService
     ) {
         parent::__construct($customerRepository);
+        $this->phoneVerificationService = $phoneVerificationService;
     }
 
     /**
@@ -50,25 +48,21 @@ class PhoneAuthController extends CustomerController
             ], 400);
         }
 
-        // Генерация кода подтверждения (6-значный код)
-        $verificationCode = rand(100000, 999999);
+        // Отправляем код подтверждения
+        $code = $this->phoneVerificationService->sendVerificationCode($request->phone);
 
-        // Сохраняем код и данные пользователя в сессии
-        $request->session()->put('phone_verification', [
-            'phone' => $request->phone,
-            'code'  => $verificationCode,
-            'data'  => $request->only(['first_name', 'last_name', 'phone', 'email']),
-            'expires_at' => now()->addMinutes(10), // Код действителен 10 минут
-        ]);
-
-        // В реальном приложении здесь должна быть отправка SMS
-        // Например: $this->sendSMS($request->phone, "Ваш код подтверждения: $verificationCode");
+        // Сохраняем данные пользователя в кэше
+        \Cache::put(
+            'phone_registration_data_' . $request->phone,
+            $request->only(['first_name', 'last_name', 'phone', 'email']),
+            now()->addMinutes(10)
+        );
 
         // Для тестирования возвращаем код в ответе (в продакшене убрать!)
         return response([
             'success' => true,
             'message' => trans('rest-api::app.shop.customer.accounts.verification-code-sent'),
-            'code'    => $verificationCode, // Удалить в продакшене
+            'code'    => $code, // Удалить в продакшене
         ]);
     }
 
@@ -89,23 +83,23 @@ class PhoneAuthController extends CustomerController
             ], 400);
         }
 
-        // Получаем данные верификации из сессии
-        $verificationData = $request->session()->get('phone_verification');
-
-        // Проверяем валидность кода
-        if (
-            ! $verificationData
-            || $verificationData['phone'] != $request->phone
-            || $verificationData['code'] != $request->code
-            || now()->isAfter($verificationData['expires_at'])
-        ) {
+        // Проверяем код
+        if (!$this->phoneVerificationService->verifyCode($request->phone, $request->code)) {
             return response([
                 'success' => false,
                 'message' => trans('rest-api::app.shop.customer.accounts.invalid-verification-code'),
             ], 400);
         }
 
-        $data = $verificationData['data'];
+        // Получаем данные пользователя из кэша
+        $data = \Cache::get('phone_registration_data_' . $request->phone);
+
+        if (!$data) {
+            return response([
+                'success' => false,
+                'message' => 'Registration data expired. Please try again.',
+            ], 400);
+        }
 
         // Добавляем необходимые поля для создания пользователя
         $data['password'] = bcrypt(uniqid()); // Генерируем случайный пароль
@@ -121,8 +115,9 @@ class PhoneAuthController extends CustomerController
         // Создаем токен для API
         $token = $customer->createToken('customer-phone-auth', ['role:customer'])->plainTextToken;
 
-        // Очищаем данные верификации из сессии
-        $request->session()->forget('phone_verification');
+        // Очищаем данные из кэша
+        \Cache::forget('phone_verification_code_' . $request->phone);
+        \Cache::forget('phone_registration_data_' . $request->phone);
 
         Event::dispatch('customer.registration.after', $customer);
 
@@ -160,25 +155,17 @@ class PhoneAuthController extends CustomerController
             ], 404);
         }
 
-        // Генерация кода подтверждения (6-значный код)
-        $verificationCode = rand(100000, 999999);
+        // Отправляем код подтверждения
+        $code = $this->phoneVerificationService->sendVerificationCode($request->phone);
 
-        // Сохраняем код в сессии
-        $request->session()->put('phone_login_verification', [
-            'phone' => $request->phone,
-            'code'  => $verificationCode,
-            'customer_id' => $customer->id,
-            'expires_at' => now()->addMinutes(10), // Код действителен 10 минут
-        ]);
-
-        // В реальном приложении здесь должна быть отправка SMS
-        // Например: $this->sendSMS($request->phone, "Ваш код подтверждения: $verificationCode");
+        // Сохраняем ID пользователя в кэше
+        \Cache::put('phone_login_customer_id_' . $request->phone, $customer->id, now()->addMinutes(10));
 
         // Для тестирования возвращаем код в ответе (в продакшене убрать!)
         return response([
             'success' => true,
             'message' => trans('rest-api::app.shop.customer.accounts.verification-code-sent'),
-            'code'    => $verificationCode, // Удалить в продакшене
+            'code'    => $code, // Удалить в продакшене
         ]);
     }
 
@@ -200,24 +187,26 @@ class PhoneAuthController extends CustomerController
             ], 400);
         }
 
-        // Получаем данные верификации из сессии
-        $verificationData = $request->session()->get('phone_login_verification');
-
-        // Проверяем валидность кода
-        if (
-            ! $verificationData
-            || $verificationData['phone'] != $request->phone
-            || $verificationData['code'] != $request->code
-            || now()->isAfter($verificationData['expires_at'])
-        ) {
+        // Проверяем код
+        if (!$this->phoneVerificationService->verifyCode($request->phone, $request->code)) {
             return response([
                 'success' => false,
                 'message' => trans('rest-api::app.shop.customer.accounts.invalid-verification-code'),
             ], 400);
         }
 
+        // Получаем ID пользователя из кэша
+        $customerId = \Cache::get('phone_login_customer_id_' . $request->phone);
+
+        if (!$customerId) {
+            return response([
+                'success' => false,
+                'message' => 'Login session expired. Please try again.',
+            ], 400);
+        }
+
         // Получаем пользователя
-        $customer = $this->customerRepository->find($verificationData['customer_id']);
+        $customer = $this->customerRepository->find($customerId);
 
         if (! $customer) {
             return response([
@@ -232,8 +221,9 @@ class PhoneAuthController extends CustomerController
         // Создаем новый токен
         $token = $customer->createToken($request->device_name, ['role:customer'])->plainTextToken;
 
-        // Очищаем данные верификации из сессии
-        $request->session()->forget('phone_login_verification');
+        // Очищаем данные из кэша
+        \Cache::forget('phone_verification_code_' . $request->phone);
+        \Cache::forget('phone_login_customer_id_' . $request->phone);
 
         // Событие после входа
         Event::dispatch('customer.after.login', $customer);
@@ -244,21 +234,5 @@ class PhoneAuthController extends CustomerController
             'customer' => new CustomerResource($customer),
             'token'    => $token,
         ]);
-    }
-
-    /**
-     * Send SMS with verification code (mock implementation).
-     */
-    protected function sendSMS(string $phone, string $message): bool
-    {
-        // Здесь должна быть реализация отправки SMS через выбранный сервис
-        // Например:
-        // $client = new SmsClient(config('services.sms.key'));
-        // return $client->send($phone, $message);
-
-        // Заглушка для тестирования
-        \Log::info("SMS to $phone: $message");
-
-        return true;
     }
 }
