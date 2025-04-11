@@ -62,7 +62,6 @@ class PhoneAuthController extends CustomerController
         return response([
             'success' => true,
             'message' => trans('rest-api::app.shop.customer.accounts.verification-code-sent'),
-            'code'    => $code, // Удалить в продакшене
         ]);
     }
 
@@ -165,7 +164,6 @@ class PhoneAuthController extends CustomerController
         return response([
             'success' => true,
             'message' => trans('rest-api::app.shop.customer.accounts.verification-code-sent'),
-            'code'    => $code, // Удалить в продакшене
         ]);
     }
 

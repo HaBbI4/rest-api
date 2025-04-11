@@ -98,6 +98,10 @@ namespace Webkul\RestApi\Docs\Shop\Controllers;
  *     name="Newsletter",
  *     description="API Endpoints of Newsletters"
  * )
+ * @OA\Tag(
+ *      name="Phone Authentication",
+ *      description="API Endpoints of Phone Authentication"
+ *  )
  */
 class Controller
 {
