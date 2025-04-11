@@ -283,12 +283,7 @@ class PhoneAuthController
      *                      type="string",
      *                      example="123456"
      *                  ),
-     *                  @OA\Property(
-     *                      property="device_name",
-     *                      type="string",
-     *                      example="android"
-     *                  ),
-     *                  required={"phone", "code", "device_name"}
+     *                  required={"phone", "code"}
      *              )
      *          )
      *      ),
