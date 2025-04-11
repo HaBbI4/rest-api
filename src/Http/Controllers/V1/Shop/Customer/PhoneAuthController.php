@@ -177,7 +177,6 @@ class PhoneAuthController extends CustomerController
         $validator = Validator::make($request->all(), [
             'phone' => 'required',
             'code'  => 'required',
-            'device_name' => 'nullable',
         ]);
 
         if ($validator->fails()) {
@@ -219,7 +218,7 @@ class PhoneAuthController extends CustomerController
         $customer->tokens()->delete();
 
         // Создаем новый токен
-        $token = $customer->createToken($request->device_name, ['role:customer'])->plainTextToken;
+        $token = $customer->createToken('device_name', ['role:customer'])->plainTextToken;
 
         // Очищаем данные из кэша
         \Cache::forget('phone_verification_code_' . $request->phone);
