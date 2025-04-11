@@ -25,6 +25,16 @@ Route::controller(AuthController::class)->prefix('customer')->group(function () 
 });
 
 /**
+ * Phone authentication routes.
+ */
+Route::controller(PhoneAuthController::class)->prefix('customer')->group(function () {
+    Route::post('register-by-phone', 'registerByPhone');
+    Route::post('verify-phone', 'verifyPhone');
+    Route::post('login-by-phone', 'loginByPhone');
+    Route::post('verify-phone-login', 'verifyPhoneLogin');
+});
+
+/**
  * Customer authorized routes.
  */
 Route::group(['middleware' => ['auth:sanctum', 'sanctum.customer']], function () {
@@ -146,15 +156,5 @@ Route::group(['middleware' => ['auth:sanctum', 'sanctum.customer']], function ()
      */
     Route::controller(NewsLetterController::class)->prefix('customer/subscription')->group(function () {
         Route::post('', 'store');
-    });
-
-    /**
-     * Phone authentication routes.
-     */
-    Route::controller(PhoneAuthController::class)->prefix('customer')->group(function () {
-        Route::post('register-by-phone', 'registerByPhone');
-        Route::post('verify-phone', 'verifyPhone');
-        Route::post('login-by-phone', 'loginByPhone');
-        Route::post('verify-phone-login', 'verifyPhoneLogin');
     });
 });
