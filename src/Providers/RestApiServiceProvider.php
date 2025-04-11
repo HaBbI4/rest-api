@@ -49,6 +49,8 @@ class RestApiServiceProvider extends ServiceProvider
         $this->mapApiRoutes();
 
         $this->registerCommands();
+
+        $this->app->register(PhoneAuthServiceProvider::class);
     }
 
     /**
