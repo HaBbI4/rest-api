@@ -93,54 +93,65 @@ class BlogController extends ShopController
      */
     public function show($id)
     {
-        // Получаем блог по ID
-        $blog = $this->blogRepository->findOrFail($id);
+        try {
+            // Получаем блог по ID
+            $blog = $this->blogRepository->findOrFail($id);
 
-        if (!$blog || !$blog->status) {
+            if (!$blog || !$blog->status) {
+                return response([
+                    'success' => false,
+                    'message' => trans('rest-api::app.shop.blog.not-found'),
+                ], 404);
+            }
+
+            // Получаем категории блога
+            $categories = [];
+            if ($blog->categories && is_iterable($blog->categories)) {
+                foreach ($blog->categories as $category) {
+                    $categories[] = [
+                        'id' => $category->id,
+                        'name' => $category->name,
+                        'url_key' => $category->url_key,
+                    ];
+                }
+            }
+
+            // Получаем теги блога
+            $tags = [];
+            if ($blog->tags && is_iterable($blog->tags)) {
+                foreach ($blog->tags as $tag) {
+                    $tags[] = [
+                        'id' => $tag->id,
+                        'name' => $tag->name,
+                    ];
+                }
+            }
+
+            // Форматируем данные блога для API
+            $formattedBlog = [
+                'id' => $blog->id,
+                'title' => $blog->title,
+                'url_key' => $blog->url_key,
+                'preview_image' => $blog->preview_image_url ?? null,
+                'content' => $blog->content,
+                'summary' => $blog->summary,
+                'published_at' => $blog->published_at,
+                'meta_title' => $blog->meta_title,
+                'meta_description' => $blog->meta_description,
+                'meta_keywords' => $blog->meta_keywords,
+                'categories' => $categories,
+                'tags' => $tags,
+            ];
+
+            return response([
+                'success' => true,
+                'data' => $formattedBlog,
+            ]);
+        } catch (\Exception $e) {
             return response([
                 'success' => false,
-                'message' => trans('rest-api::app.shop.blog.not-found'),
-            ], 404);
+                'message' => $e->getMessage(),
+            ], 500);
         }
-
-        // Получаем категории блога
-        $categories = [];
-        foreach ($blog->categories as $category) {
-            $categories[] = [
-                'id' => $category->id,
-                'name' => $category->name,
-                'url_key' => $category->url_key,
-            ];
-        }
-
-        // Получаем теги блога
-        $tags = [];
-        foreach ($blog->tags as $tag) {
-            $tags[] = [
-                'id' => $tag->id,
-                'name' => $tag->name,
-            ];
-        }
-
-        // Форматируем данные блога для API
-        $formattedBlog = [
-            'id' => $blog->id,
-            'title' => $blog->title,
-            'url_key' => $blog->url_key,
-            'preview_image' => $blog->preview_image_url,
-            'content' => $blog->content,
-            'summary' => $blog->summary,
-            'published_at' => $blog->published_at,
-            'meta_title' => $blog->meta_title,
-            'meta_description' => $blog->meta_description,
-            'meta_keywords' => $blog->meta_keywords,
-            'categories' => $categories,
-            'tags' => $tags,
-        ];
-
-        return response([
-            'success' => true,
-            'data' => $formattedBlog,
-        ]);
     }
 }
