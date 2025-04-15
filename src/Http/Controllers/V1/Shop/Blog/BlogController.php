@@ -86,15 +86,15 @@ class BlogController extends ShopController
     }
 
     /**
-     * Get blog by url_key.
+     * Get blog by ID.
      *
-     * @param  string  $urlKey
+     * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($urlKey)
+    public function show($id)
     {
-        // Получаем блог по url_key
-        $blog = $this->blogRepository->findByUrlKeyOrFail($urlKey);
+        // Получаем блог по ID
+        $blog = $this->blogRepository->findOrFail($id);
 
         if (!$blog || !$blog->status) {
             return response([

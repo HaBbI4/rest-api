@@ -8,5 +8,5 @@ Route::group(['middleware' => ['locale', 'theme', 'currency']], function () {
      * Blog routes.
      */
     Route::get('blogs', [BlogController::class, 'index']);
-    Route::get('blogs/{url_key}', [BlogController::class, 'show']);
+    Route::get('blogs/{id}', [BlogController::class, 'show']);
 });
