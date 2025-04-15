@@ -132,15 +132,12 @@ class BlogController extends ShopController
                 'id' => $blog->id,
                 'title' => $blog->title,
                 'url_key' => $blog->url_key,
-                'preview_image' => $blog->preview_image_url ?? null,
-                'content' => $blog->content,
+                'preview_image' => $blog->preview_image_url,
                 'summary' => $blog->summary,
                 'published_at' => $blog->published_at,
                 'meta_title' => $blog->meta_title,
                 'meta_description' => $blog->meta_description,
                 'meta_keywords' => $blog->meta_keywords,
-                'categories' => $categories,
-                'tags' => $tags,
             ];
 
             return response([
