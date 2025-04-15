@@ -550,5 +550,8 @@ return [
                 'title'   => '503 Service Unavailable',
             ],
         ],
+        'blog' => [
+            'not-found' => 'Блог не найден',
+        ],
     ],
 ];

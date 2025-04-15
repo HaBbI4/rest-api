@@ -20,4 +20,9 @@ Route::group([
      * Customer routes.
      */
     require 'customers-routes.php';
+
+    /**
+     * Blog routes.
+     */
+    require 'blog-routes.php';
 });
