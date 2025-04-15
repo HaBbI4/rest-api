@@ -94,60 +94,56 @@ class BlogController extends ShopController
     public function show($id)
     {
         try {
-            // Получаем блог по ID
+            // Получаем блог по ID с загрузкой связанных данных
             $blog = $this->blogRepository->findOrFail($id);
 
-            if (!$blog || !$blog->status) {
+            if (!$blog) {
                 return response([
                     'success' => false,
                     'message' => trans('rest-api::app.shop.blog.not-found'),
                 ], 404);
             }
 
-            // Получаем категории блога
+            // Преобразуем объект блога в массив для доступа к свойствам
+            $blogArray = $blog->toArray();
+
+            // Получаем категории блога, если они доступны
             $categories = [];
-            if ($blog->categories && is_iterable($blog->categories)) {
+            if (isset($blog->categories) && is_iterable($blog->categories)) {
                 foreach ($blog->categories as $category) {
                     $categories[] = [
                         'id' => $category->id,
                         'name' => $category->name,
-                        'url_key' => $category->url_key,
+                        'slug' => $category->slug,
                     ];
                 }
+            } else if (isset($blogArray['categories']) && is_array($blogArray['categories'])) {
+                $categories = $blogArray['categories'];
             }
 
-            // Получаем теги блога
-            $tags = [];
-            if ($blog->tags && is_iterable($blog->tags)) {
-                foreach ($blog->tags as $tag) {
-                    $tags[] = [
-                        'id' => $tag->id,
-                        'name' => $tag->name,
-                    ];
-                }
+            // Добавляем категории к данным блога
+            $blogArray['categories'] = $categories;
+
+            // Добавляем URL изображения, если оно есть
+            if (isset($blog->src) && !empty($blog->src)) {
+                $blogArray['src_url'] = url('storage/' . $blog->src);
             }
 
-            // Форматируем данные блога для API
-            $formattedBlog = [
-                'id' => $blog->id,
-                'title' => $blog->title,
-                'url_key' => $blog->url_key,
-                'preview_image' => $blog->preview_image_url,
-                'summary' => $blog->summary,
-                'published_at' => $blog->published_at,
-                'meta_title' => $blog->meta_title,
-                'meta_description' => $blog->meta_description,
-                'meta_keywords' => $blog->meta_keywords,
-            ];
-
+            // Проверяем и выводим все доступные поля
             return response([
                 'success' => true,
-                'data' => $formattedBlog,
+                'data' => $blogArray,
+                // Для отладки: выводим оригинальные данные блога
+                'debug' => [
+                    'original' => $blog->getAttributes(),
+                    'relations' => $blog->getRelations(),
+                ]
             ]);
         } catch (\Exception $e) {
             return response([
                 'success' => false,
                 'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(), // Для отладки
             ], 500);
         }
     }
