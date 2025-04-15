@@ -7,6 +7,7 @@ use Illuminate\Http\Response;
 use Webkul\RestApi\Http\Controllers\V1\Shop\ShopController;
 use Webbycrown\BlogBagisto\Repositories\BlogRepository;
 use Webbycrown\BlogBagisto\Repositories\BlogCategoryRepository;
+use Illuminate\Support\Facades\DB;
 
 class BlogController extends ShopController
 {
@@ -133,11 +134,6 @@ class BlogController extends ShopController
             return response([
                 'success' => true,
                 'data' => $blogArray,
-                // Для отладки: выводим оригинальные данные блога
-                'debug' => [
-                    'original' => $blog->getAttributes(),
-                    'relations' => $blog->getRelations(),
-                ]
             ]);
         } catch (\Exception $e) {
             return response([
