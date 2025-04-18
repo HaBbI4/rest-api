@@ -163,5 +163,5 @@ Route::group(['middleware' => ['auth:sanctum', 'sanctum.customer']], function ()
 });
 
 Route::group(['middleware' => ['locale', 'theme', 'currency']], function () {
-    Route::post('customer-register', [CustomerCompanyController::class, 'register']);
+    Route::post('customer/company-register', [CustomerCompanyController::class, 'register']);
 });
