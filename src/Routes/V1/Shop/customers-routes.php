@@ -12,6 +12,7 @@ use Webkul\RestApi\Http\Controllers\V1\Shop\Customer\ShipmentController;
 use Webkul\RestApi\Http\Controllers\V1\Shop\Customer\TransactionController;
 use Webkul\RestApi\Http\Controllers\V1\Shop\Customer\WishlistController;
 use Webkul\RestApi\Http\Controllers\V1\Shop\Customer\NewsLetterController;
+use Webkul\RestApi\Http\Controllers\V1\Shop\Customer\CustomerCompanyController;
 
 /**
  * Customer unauthorized routes.
@@ -157,4 +158,8 @@ Route::group(['middleware' => ['auth:sanctum', 'sanctum.customer']], function ()
     Route::controller(NewsLetterController::class)->prefix('customer/subscription')->group(function () {
         Route::post('', 'store');
     });
+
+    Route::controller(CustomerCompanyController::class)->prefix('customer/company')->group(function () {
+        Route::post('register', 'register');}
+    );
 });
