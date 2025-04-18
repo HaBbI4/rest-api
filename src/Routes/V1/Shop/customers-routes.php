@@ -159,7 +159,9 @@ Route::group(['middleware' => ['auth:sanctum', 'sanctum.customer']], function ()
         Route::post('', 'store');
     });
 
-    Route::controller(CustomerCompanyController::class)->prefix('customer/company')->group(function () {
-        Route::post('register', 'register');}
-    );
+
 });
+
+Route::controller(CustomerCompanyController::class)->prefix('customer/company')->group(function () {
+    Route::post('register', 'register');}
+);
