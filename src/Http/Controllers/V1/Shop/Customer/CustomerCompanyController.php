@@ -37,7 +37,7 @@ class CustomerCompanyController extends CustomerController
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
             'email' => 'required|email|unique:customers,email',
-            'phone' => 'required|string|unique:customers,phone',
+            'phone' => 'nullable|string|unique:customers,phone',
             'company_name' => 'required|string|max:255',
             'company_address' => 'nullable|string',
             'company_requisites' => 'nullable|string',
