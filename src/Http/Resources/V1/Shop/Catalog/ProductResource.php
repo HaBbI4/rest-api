@@ -255,8 +255,30 @@ class ProductResource extends JsonResource
     {
         $prices = [];
 
+        // Добавляем отладочную информацию
+        $debug = [
+            'has_customer_group_prices_property' => property_exists($product, 'customer_group_prices'),
+            'customer_group_prices_value' => $product->customer_group_prices ?? 'null',
+            'product_id' => $product->id,
+            'product_type' => $product->type,
+            'all_product_relations' => array_keys(get_object_vars($product)),
+        ];
+
+        // Проверяем разные способы получения цен для групп клиентов
+        if (method_exists($product, 'customer_group_prices')) {
+            $debug['has_customer_group_prices_method'] = true;
+            $debug['customer_group_prices_method_result'] = $product->customer_group_prices();
+        } else {
+            $debug['has_customer_group_prices_method'] = false;
+        }
+
+        // Пробуем получить цены через отношение
+        if (method_exists($product, 'getRelation')) {
+            $debug['customer_group_prices_relation'] = $product->getRelation('customer_group_prices');
+        }
+
         // Получаем все цены для групп клиентов
-        if ($product->customer_group_prices) {
+        if (property_exists($product, 'customer_group_prices') && $product->customer_group_prices) {
             foreach ($product->customer_group_prices as $price) {
                 $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($price->customer_group_id);
                 
@@ -275,6 +297,11 @@ class ProductResource extends JsonResource
                     'formatted_calculated_price' => core()->currency($this->calculatePrice($product, $price)),
                 ];
             }
+        }
+
+        // Если нет цен, возвращаем отладочную информацию
+        if (empty($prices)) {
+            return ['debug_info' => $debug];
         }
 
         return $prices;
