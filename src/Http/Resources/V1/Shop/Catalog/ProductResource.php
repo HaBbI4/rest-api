@@ -26,12 +26,21 @@ class ProductResource extends JsonResource
         $reviewHelper = app(\Webkul\Product\Helpers\Review::class);
 
         /* Проверяем, является ли пользователь оптовым клиентом */
-        $isWholesaleCustomer = false;
+        $isWholesaleCustomer = true; // Временно установим true для всех пользователей для отладки
+        
+        $debugInfo = [
+            'auth_check' => auth()->guard('customer')->check(),
+            'user_info' => auth()->guard('customer')->check() ? auth()->guard('customer')->user()->toArray() : null,
+        ];
         
         if (auth()->guard('customer')->check()) {
             $customer = auth()->guard('customer')->user();
             $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($customer->customer_group_id);
             $isWholesaleCustomer = $customerGroup && $customerGroup->code === 'wholesale';
+            
+            $debugInfo['customer_group_id'] = $customer->customer_group_id;
+            $debugInfo['customer_group'] = $customerGroup ? $customerGroup->toArray() : null;
+            $debugInfo['is_wholesale'] = $isWholesaleCustomer;
         }
 
         /* generating resource */
@@ -71,9 +80,8 @@ class ProductResource extends JsonResource
             ),
 
             /* Цены для оптовых клиентов */
-            $this->mergeWhen($isWholesaleCustomer, [
-                'customer_group_prices' => $this->getCustomerGroupPrices($product),
-            ]),
+            'customer_group_prices' => $this->getCustomerGroupPrices($product),
+            'auth_debug' => $debugInfo,
 
             /* product's extra information */
             $this->merge($this->allProductExtraInfo()),
@@ -257,49 +265,103 @@ class ProductResource extends JsonResource
         $debug = [];
 
         try {
-            // Получаем репозиторий цен для групп клиентов
-            $customerGroupPriceRepository = app(\Webkul\Product\Repositories\ProductCustomerGroupPriceRepository::class);
-            
-            // Получаем все цены для групп клиентов для данного продукта
-            $customerGroupPrices = $customerGroupPriceRepository->findWhere(['product_id' => $product->id]);
-            
+            // Добавляем информацию о продукте
             $debug['product_id'] = $product->id;
-            $debug['customer_group_prices_count'] = $customerGroupPrices->count();
+            $debug['product_type'] = $product->type;
             
-            if ($customerGroupPrices->count() > 0) {
-                foreach ($customerGroupPrices as $price) {
-                    $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($price->customer_group_id);
-                    
-                    if (!$customerGroup) {
-                        continue;
+            // Добавляем информацию об авторизации
+            $debug['auth_check'] = auth()->guard('customer')->check();
+            $debug['user_info'] = auth()->guard('customer')->check() ? [
+                'id' => auth()->guard('customer')->user()->id,
+                'email' => auth()->guard('customer')->user()->email,
+                'customer_group_id' => auth()->guard('customer')->user()->customer_group_id,
+            ] : null;
+            
+            // Добавляем информацию о группе клиентов
+            if (auth()->guard('customer')->check()) {
+                $customer = auth()->guard('customer')->user();
+                $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($customer->customer_group_id);
+                $debug['customer_group'] = $customerGroup ? [
+                    'id' => $customerGroup->id,
+                    'name' => $customerGroup->name,
+                    'code' => $customerGroup->code,
+                ] : null;
+            }
+            
+            // Проверяем наличие репозитория цен для групп клиентов
+            $debug['repository_exists'] = class_exists(\Webkul\Product\Repositories\ProductCustomerGroupPriceRepository::class);
+            
+            // Если репозиторий существует, пытаемся получить цены
+            if (class_exists(\Webkul\Product\Repositories\ProductCustomerGroupPriceRepository::class)) {
+                $customerGroupPriceRepository = app(\Webkul\Product\Repositories\ProductCustomerGroupPriceRepository::class);
+                $customerGroupPrices = $customerGroupPriceRepository->findWhere(['product_id' => $product->id]);
+                
+                $debug['customer_group_prices_count'] = $customerGroupPrices->count();
+                
+                if ($customerGroupPrices->count() > 0) {
+                    foreach ($customerGroupPrices as $price) {
+                        $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($price->customer_group_id);
+                        
+                        if (!$customerGroup) {
+                            continue;
+                        }
+                        
+                        $prices[] = [
+                            'customer_group_id' => $price->customer_group_id,
+                            'customer_group_code' => $customerGroup->code,
+                            'customer_group_name' => $customerGroup->name,
+                            'qty' => $price->qty,
+                            'value_type' => $price->value_type,
+                            'value' => $price->value,
+                            'calculated_price' => $this->calculatePrice($product, $price),
+                            'formatted_calculated_price' => core()->currency($this->calculatePrice($product, $price)),
+                        ];
                     }
+                } else {
+                    // Если цен для групп клиентов нет, добавляем стандартную цену
+                    $customerGroups = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->all();
                     
-                    $prices[] = [
-                        'customer_group_id' => $price->customer_group_id,
-                        'customer_group_code' => $customerGroup->code,
-                        'customer_group_name' => $customerGroup->name,
-                        'qty' => $price->qty,
-                        'value_type' => $price->value_type,
-                        'value' => $price->value,
-                        'calculated_price' => $this->calculatePrice($product, $price),
-                        'formatted_calculated_price' => core()->currency($this->calculatePrice($product, $price)),
-                    ];
+                    foreach ($customerGroups as $customerGroup) {
+                        $prices[] = [
+                            'customer_group_id' => $customerGroup->id,
+                            'customer_group_code' => $customerGroup->code,
+                            'customer_group_name' => $customerGroup->name,
+                            'qty' => 1,
+                            'value_type' => 'fixed',
+                            'value' => $product->getTypeInstance()->getMinimalPrice(),
+                            'calculated_price' => $product->getTypeInstance()->getMinimalPrice(),
+                            'formatted_calculated_price' => core()->currency($product->getTypeInstance()->getMinimalPrice()),
+                        ];
+                    }
                 }
             } else {
-                // Если цен для групп клиентов нет, добавляем стандартную цену
-                $customerGroups = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->all();
+                $debug['error'] = 'ProductCustomerGroupPriceRepository не существует';
                 
-                foreach ($customerGroups as $customerGroup) {
-                    $prices[] = [
-                        'customer_group_id' => $customerGroup->id,
-                        'customer_group_code' => $customerGroup->code,
-                        'customer_group_name' => $customerGroup->name,
-                        'qty' => 1,
-                        'value_type' => 'fixed',
-                        'value' => $product->getTypeInstance()->getMinimalPrice(),
-                        'calculated_price' => $product->getTypeInstance()->getMinimalPrice(),
-                        'formatted_calculated_price' => core()->currency($product->getTypeInstance()->getMinimalPrice()),
-                    ];
+                // Пробуем получить цены через свойство продукта
+                if (property_exists($product, 'customer_group_prices') && $product->customer_group_prices) {
+                    $debug['has_customer_group_prices_property'] = true;
+                    $debug['customer_group_prices_count'] = count($product->customer_group_prices);
+                    
+                    foreach ($product->customer_group_prices as $price) {
+                        $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($price->customer_group_id);
+                        
+                        if (!$customerGroup) {
+                            continue;
+                        }
+                        
+                        $prices[] = [
+                            'customer_group_id' => $price->customer_group_id,
+                            'customer_group_code' => $customerGroup->code,
+                            'customer_group_name' => $customerGroup->name,
+                            'qty' => $price->qty,
+                            'value_type' => $price->value_type,
+                            'value' => $price->value,
+                            'calculated_price' => $this->calculatePrice($product, $price),
+                            'formatted_calculated_price' => core()->currency($this->calculatePrice($product, $price)),
+                        ];
+                    }
+                } else {
+                    $debug['has_customer_group_prices_property'] = false;
                 }
             }
         } catch (\Exception $e) {
@@ -307,12 +369,11 @@ class ProductResource extends JsonResource
             $debug['trace'] = $e->getTraceAsString();
         }
         
-        // Если нет цен, возвращаем отладочную информацию
-        if (empty($prices)) {
-            return ['debug_info' => $debug];
-        }
-        
-        return $prices;
+        // Всегда возвращаем отладочную информацию
+        return [
+            'prices' => $prices,
+            'debug_info' => $debug
+        ];
     }
 
     /**
