@@ -289,7 +289,8 @@ class ProductResource extends JsonResource
      */
     private function calculatePrice($product, $price)
     {
-        $productPrice = $product->getTypeInstance()->getProductBasePrice();
+        $productTypeInstance = $product->getTypeInstance();
+        $productPrice = $productTypeInstance->getMinimalPrice();
 
         if ($price->value_type === 'discount') {
             return $productPrice - ($productPrice * $price->value / 100);
