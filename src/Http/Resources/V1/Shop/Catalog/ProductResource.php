@@ -26,25 +26,65 @@ class ProductResource extends JsonResource
         $reviewHelper = app(\Webkul\Product\Helpers\Review::class);
 
         /* Проверяем, является ли пользователь оптовым клиентом */
-        $isWholesaleCustomer = true; // Временно установим true для всех пользователей для отладки
+        $isWholesaleCustomer = false;
+        $debugInfo = [];
         
-        $debugInfo = [
-            'auth_check' => auth()->guard('customer')->check(),
-            'user_info' => auth()->guard('customer')->check() ? auth()->guard('customer')->user()->toArray() : null,
-        ];
+        // Получаем токен из заголовка Authorization
+        $token = $request->bearerToken();
+        $debugInfo['has_token'] = !empty($token);
         
-        if (auth()->guard('customer')->check()) {
+        // Если есть токен, пытаемся получить пользователя
+        if ($token) {
+            // Находим токен в базе данных
+            $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            $debugInfo['token_found'] = !empty($tokenModel);
+            
+            if ($tokenModel) {
+                // Получаем пользователя по токену
+                $user = $tokenModel->tokenable;
+                $debugInfo['user_found'] = !empty($user);
+                $debugInfo['user_type'] = $user ? get_class($user) : null;
+                
+                // Если пользователь - клиент, проверяем его группу
+                if ($user && $user instanceof \Webkul\Customer\Models\Customer) {
+                    $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($user->customer_group_id);
+                    $isWholesaleCustomer = $customerGroup && $customerGroup->code === 'wholesale';
+                    
+                    $debugInfo['customer_id'] = $user->id;
+                    $debugInfo['customer_email'] = $user->email;
+                    $debugInfo['customer_group_id'] = $user->customer_group_id;
+                    $debugInfo['customer_group'] = $customerGroup ? [
+                        'id' => $customerGroup->id,
+                        'name' => $customerGroup->name,
+                        'code' => $customerGroup->code,
+                    ] : null;
+                    $debugInfo['is_wholesale'] = $isWholesaleCustomer;
+                }
+            }
+        }
+        
+        // Также проверяем сессионную авторизацию
+        $sessionAuth = auth()->guard('customer')->check();
+        $debugInfo['session_auth'] = $sessionAuth;
+        
+        if ($sessionAuth && !$isWholesaleCustomer) {
             $customer = auth()->guard('customer')->user();
             $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($customer->customer_group_id);
             $isWholesaleCustomer = $customerGroup && $customerGroup->code === 'wholesale';
             
-            $debugInfo['customer_group_id'] = $customer->customer_group_id;
-            $debugInfo['customer_group'] = $customerGroup ? $customerGroup->toArray() : null;
-            $debugInfo['is_wholesale'] = $isWholesaleCustomer;
+            $debugInfo['session_customer_id'] = $customer->id;
+            $debugInfo['session_customer_email'] = $customer->email;
+            $debugInfo['session_customer_group_id'] = $customer->customer_group_id;
+            $debugInfo['session_customer_group'] = $customerGroup ? [
+                'id' => $customerGroup->id,
+                'name' => $customerGroup->name,
+                'code' => $customerGroup->code,
+            ] : null;
+            $debugInfo['session_is_wholesale'] = $isWholesaleCustomer;
         }
 
         /* generating resource */
-        return [
+        $resource = [
             /* product's information */
             'id'                 => $product->id,
             'sku'                => $product->sku,
@@ -78,22 +118,38 @@ class ProductResource extends JsonResource
                 $product->type !== 'grouped',
                 $product->getTypeInstance()->showQuantityBox()
             ),
-
-            /* Цены для оптовых клиентов */
-            'customer_group_prices' => $this->getCustomerGroupPrices($product),
-            'auth_debug' => $debugInfo,
-
-            /* product's extra information */
-            $this->merge($this->allProductExtraInfo()),
-
-            /* special price cases */
-            $this->merge($this->specialPriceInfo()),
-
-            /* super attributes */
-            $this->mergeWhen($productTypeInstance->isComposite(), [
-                'super_attributes' => AttributeResource::collection($product->super_attributes),
-            ]),
         ];
+
+        /* Добавляем цены для оптовых клиентов, если пользователь из оптовой группы */
+        if ($isWholesaleCustomer) {
+            $customerGroupPrices = $this->getCustomerGroupPrices($product);
+            $resource['customer_group_prices'] = $customerGroupPrices['prices'];
+        }
+        
+        /* Добавляем отладочную информацию в режиме отладки */
+        if (config('app.debug')) {
+            $resource['auth_debug'] = $debugInfo;
+            
+            // В режиме отладки всегда показываем цены для групп клиентов
+            if (!$isWholesaleCustomer) {
+                $customerGroupPrices = $this->getCustomerGroupPrices($product);
+                $resource['debug_customer_group_prices'] = $customerGroupPrices['prices'];
+                $resource['debug_prices_info'] = $customerGroupPrices['debug_info'];
+            }
+        }
+
+        /* product's extra information */
+        $resource = array_merge($resource, $this->allProductExtraInfo());
+
+        /* special price cases */
+        $resource = array_merge($resource, $this->specialPriceInfo());
+
+        /* super attributes */
+        if ($productTypeInstance->isComposite()) {
+            $resource['super_attributes'] = AttributeResource::collection($product->super_attributes);
+        }
+
+        return $resource;
     }
 
     /**
