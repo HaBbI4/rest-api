@@ -25,6 +25,15 @@ class ProductResource extends JsonResource
         /* Get review helper */
         $reviewHelper = app(\Webkul\Product\Helpers\Review::class);
 
+        /* Проверяем, является ли пользователь оптовым клиентом */
+        $isWholesaleCustomer = false;
+        
+        if (auth()->guard('customer')->check()) {
+            $customer = auth()->guard('customer')->user();
+            $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($customer->customer_group_id);
+            $isWholesaleCustomer = $customerGroup && $customerGroup->code === 'wholesale';
+        }
+
         /* generating resource */
         return [
             /* product's information */
@@ -60,6 +69,11 @@ class ProductResource extends JsonResource
                 $product->type !== 'grouped',
                 $product->getTypeInstance()->showQuantityBox()
             ),
+
+            /* Цены для оптовых клиентов */
+            $this->mergeWhen($isWholesaleCustomer, [
+                'customer_group_prices' => $this->getCustomerGroupPrices($product),
+            ]),
 
             /* product's extra information */
             $this->merge($this->allProductExtraInfo()),
@@ -229,5 +243,58 @@ class ProductResource extends JsonResource
                 return $data;
             }),
         ];
+    }
+
+    /**
+     * Получить цены для групп клиентов
+     *
+     * @param  \Webkul\Product\Models\Product  $product
+     * @return array
+     */
+    private function getCustomerGroupPrices($product)
+    {
+        $prices = [];
+
+        // Получаем все цены для групп клиентов
+        if ($product->customer_group_prices) {
+            foreach ($product->customer_group_prices as $price) {
+                $customerGroup = app(\Webkul\Customer\Repositories\CustomerGroupRepository::class)->find($price->customer_group_id);
+                
+                if (!$customerGroup) {
+                    continue;
+                }
+
+                $prices[] = [
+                    'customer_group_id' => $price->customer_group_id,
+                    'customer_group_code' => $customerGroup->code,
+                    'customer_group_name' => $customerGroup->name,
+                    'qty' => $price->qty,
+                    'value_type' => $price->value_type,
+                    'value' => $price->value,
+                    'calculated_price' => $this->calculatePrice($product, $price),
+                    'formatted_calculated_price' => core()->currency($this->calculatePrice($product, $price)),
+                ];
+            }
+        }
+
+        return $prices;
+    }
+
+    /**
+     * Рассчитать цену с учетом скидки для группы клиентов
+     *
+     * @param  \Webkul\Product\Models\Product  $product
+     * @param  object  $price
+     * @return float
+     */
+    private function calculatePrice($product, $price)
+    {
+        $productPrice = $product->getTypeInstance()->getProductBasePrice();
+
+        if ($price->value_type === 'discount') {
+            return $productPrice - ($productPrice * $price->value / 100);
+        }
+
+        return $price->value;
     }
 }
