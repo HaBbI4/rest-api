@@ -2,6 +2,16 @@
 
 namespace Webkul\RestApi\Docs\Shop\Controllers\Catalog;
 
+/**
+ * @OA\SecurityScheme(
+ *     securityScheme="bearerAuth",
+ *     in="header",
+ *     name="bearerAuth",
+ *     type="http",
+ *     scheme="bearer",
+ *     bearerFormat="JWT",
+ * )
+ */
 class ProductController
 {
     /**
@@ -90,18 +100,9 @@ class ProductController
      *          )
      *      ),
      *      
-     *      @OA\SecurityScheme(
-     *          securityScheme="bearerAuth",
-     *          in="header",
-     *          name="bearerAuth",
-     *          type="http",
-     *          scheme="bearer",
-     *          bearerFormat="JWT",
-     *      ),
-     *      
      *      @OA\Security(
-     *          security={
-     *              {"bearerAuth": {}}
+     *          {
+     *              "bearerAuth": {}
      *          }
      *      ),
      *
@@ -149,18 +150,9 @@ class ProductController
      *          )
      *      ),
      *      
-     *      @OA\SecurityScheme(
-     *          securityScheme="bearerAuth",
-     *          in="header",
-     *          name="bearerAuth",
-     *          type="http",
-     *          scheme="bearer",
-     *          bearerFormat="JWT",
-     *      ),
-     *      
      *      @OA\Security(
-     *          security={
-     *              {"bearerAuth": {}}
+     *          {
+     *              "bearerAuth": {}
      *          }
      *      ),
      *
