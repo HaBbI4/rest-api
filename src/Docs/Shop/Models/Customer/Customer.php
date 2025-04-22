@@ -101,6 +101,21 @@ class Customer
 
     /**
      * @OA\Property(
+     *     title="Group",
+     *     description="Группа пользователя",
+     *     type="object",
+     *     @OA\Property(property="id", type="integer", example=3),
+     *     @OA\Property(property="name", type="string", example="Wholesale"),
+     *     @OA\Property(property="created_at", type="string", format="datetime", nullable=true),
+     *     @OA\Property(property="updated_at", type="string", format="datetime", nullable=true)
+     * )
+     *
+     * @var object
+     */
+    private $group;
+
+    /**
+     * @OA\Property(
      *     title="Newsletter Subscription",
      *     description="Customer's Newsletter Subscription",
      *     example="1",
@@ -109,7 +124,6 @@ class Customer
      * @var string
      */
     private $subscribed_to_news_letter;
-
 
     /**
      * @OA\Property(
