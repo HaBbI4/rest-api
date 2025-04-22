@@ -89,6 +89,21 @@ class ProductController
      *              type="integer"
      *          )
      *      ),
+     *      
+     *      @OA\SecurityScheme(
+     *          securityScheme="bearerAuth",
+     *          in="header",
+     *          name="bearerAuth",
+     *          type="http",
+     *          scheme="bearer",
+     *          bearerFormat="JWT",
+     *      ),
+     *      
+     *      @OA\Security(
+     *          security={
+     *              {"bearerAuth": {}}
+     *          }
+     *      ),
      *
      *      @OA\Response(
      *          response=200,
@@ -121,7 +136,7 @@ class ProductController
      *      operationId="getShopProduct",
      *      tags={"Products"},
      *      summary="Get shop product by id",
-     *      description="Returns shop product by id",
+     *      description="Returns shop product by id. Если пользователь авторизован как оптовый клиент (группа wholesale), то в ответе будут дополнительно возвращены цены для всех групп клиентов в поле customer_group_prices.",
      *
      *      @OA\Parameter(
      *          name="id",
@@ -132,6 +147,21 @@ class ProductController
      *          @OA\Schema(
      *              type="integer"
      *          )
+     *      ),
+     *      
+     *      @OA\SecurityScheme(
+     *          securityScheme="bearerAuth",
+     *          in="header",
+     *          name="bearerAuth",
+     *          type="http",
+     *          scheme="bearer",
+     *          bearerFormat="JWT",
+     *      ),
+     *      
+     *      @OA\Security(
+     *          security={
+     *              {"bearerAuth": {}}
+     *          }
      *      ),
      *
      *      @OA\Response(

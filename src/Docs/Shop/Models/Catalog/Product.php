@@ -329,6 +329,28 @@ class Product
 
     /**
      * @OA\Property(
+     *     title="Цены для групп клиентов",
+     *     description="Цены продукта для различных групп клиентов. Доступно только для оптовых клиентов (wholesale).",
+     *     type="array",
+     *     @OA\Items(
+     *         type="object",
+     *         @OA\Property(property="customer_group_id", type="integer", example=2),
+     *         @OA\Property(property="customer_group_code", type="string", example="wholesale"),
+     *         @OA\Property(property="customer_group_name", type="string", example="Оптовые клиенты"),
+     *         @OA\Property(property="qty", type="integer", example=1),
+     *         @OA\Property(property="value_type", type="string", example="fixed", enum={"fixed", "discount"}),
+     *         @OA\Property(property="value", type="number", format="float", example=100.00),
+     *         @OA\Property(property="calculated_price", type="number", format="float", example=100.00),
+     *         @OA\Property(property="formatted_calculated_price", type="string", example="$100.00")
+     *     )
+     * )
+     *
+     * @var array
+     */
+    public $customer_group_prices;
+
+    /**
+     * @OA\Property(
      *     title="Variants",
      *     description="Product's variants, Info: this property will use with configurable type product only."
      * )
