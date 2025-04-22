@@ -99,12 +99,6 @@ class ProductController
      *              type="integer"
      *          )
      *      ),
-     *      
-     *      @OA\Security(
-     *          {
-     *              "bearerAuth": {}
-     *          }
-     *      ),
      *
      *      @OA\Response(
      *          response=200,
@@ -148,12 +142,6 @@ class ProductController
      *          @OA\Schema(
      *              type="integer"
      *          )
-     *      ),
-     *      
-     *      @OA\Security(
-     *          {
-     *              "bearerAuth": {}
-     *          }
      *      ),
      *
      *      @OA\Response(
