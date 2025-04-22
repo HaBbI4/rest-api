@@ -229,6 +229,18 @@ class Product
 
     /**
      * @OA\Property(
+     *     title="Quantity",
+     *     description="Количество товара в наличии. Для простых товаров - количество товара, для настраиваемых - сумма всех остатков вариаций.",
+     *     example=100,
+     *     type="integer"
+     * )
+     *
+     * @var int
+     */
+    public $quantity;
+
+    /**
+     * @OA\Property(
      *     title="In Saved",
      *     description="Product's in saved status",
      *     example=false
