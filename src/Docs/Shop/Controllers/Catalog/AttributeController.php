@@ -14,7 +14,7 @@ class AttributeController
      *
      *      @OA\Parameter(
      *          name="id",
-     *          description="Attribute ID",
+     *          description="Attribute id",
      *          required=false,
      *          in="query",
      *
@@ -89,7 +89,7 @@ class AttributeController
      *      )
      * )
      */
-    public function list()
+    public function allResources()
     {
     }
 
@@ -98,8 +98,8 @@ class AttributeController
      *      path="/api/v1/attributes/{id}",
      *      operationId="getShopAttribute",
      *      tags={"Attributes"},
-     *      summary="Get shop attribute by id",
-     *      description="Returns shop attribute by id",
+     *      summary="Get admin attribute by id",
+     *      description="Returns attribute detail",
      *
      *      @OA\Parameter(
      *          name="id",
@@ -132,7 +132,46 @@ class AttributeController
      *      )
      * )
      */
-    public function get()
+    public function getResource()
+    {
+    }
+
+    /**
+     * @OA\Get(
+     *      path="/api/v1/brands",
+     *      operationId="getShopBrands",
+     *      tags={"Brands"},
+     *      summary="Получение списка всех брендов",
+     *      description="Возвращает список всех брендов, доступных в магазине",
+     *
+     *      @OA\Response(
+     *          response=200,
+     *          description="Успешная операция",
+     *
+     *          @OA\JsonContent(
+     *
+     *              @OA\Property(
+     *                  property="data",
+     *                  type="array",
+     *
+     *                  @OA\Items(
+     *                      type="object",
+     *                      @OA\Property(property="id", type="integer", example=1),
+     *                      @OA\Property(property="admin_name", type="string", example="Nike"),
+     *                      @OA\Property(property="label", type="string", example="Nike"),
+     *                      @OA\Property(property="swatch_value", type="string", example=null)
+     *                  )
+     *              )
+     *          )
+     *      ),
+     *
+     *      @OA\Response(
+     *          response=404,
+     *          description="Атрибут бренда не найден"
+     *      )
+     * )
+     */
+    public function getBrands()
     {
     }
 }

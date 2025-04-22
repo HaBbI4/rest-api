@@ -56,7 +56,14 @@ Route::controller(AttributeController::class)->prefix('attributes')->group(funct
 });
 
 /**
- * Attribute family routes.
+ * Brands routes.
+ */
+Route::controller(AttributeController::class)->prefix('brands')->group(function () {
+    Route::get('', 'getBrands');
+});
+
+/**
+ * Attribute Family routes.
  */
 Route::controller(AttributeFamilyController::class)->prefix('attribute-families')->group(function () {
     Route::get('', 'allResources');
