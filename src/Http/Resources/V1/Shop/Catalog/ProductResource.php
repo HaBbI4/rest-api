@@ -92,7 +92,7 @@ class ProductResource extends JsonResource
                 $product->type !== 'grouped',
                 $product->getTypeInstance()->showQuantityBox()
             ),
-            'quantity'              => $productTypeInstance->totalQuantity(),
+            'quantity'              => $this->getProductQuantity($product, $productTypeInstance),
         ];
 
         /* Добавляем цены для оптовых клиентов, если пользователь из оптовой группы */
@@ -372,5 +372,32 @@ class ProductResource extends JsonResource
         }
 
         return $price->value;
+    }
+
+    /**
+     * Получить количество товара в зависимости от его типа
+     *
+     * @param  \Webkul\Product\Models\Product  $product
+     * @param  \Webkul\Product\Type\AbstractType  $productTypeInstance
+     * @return int
+     */
+    private function getProductQuantity($product, $productTypeInstance)
+    {
+        if ($product->type === 'configurable') {
+            // Для настраиваемых товаров суммируем количество всех вариаций
+            $total = 0;
+            foreach ($product->variants as $variant) {
+                // Получаем инвентарь для текущего канала
+                $inventoryIndex = $variant->getTypeInstance()->getInventoryIndex();
+                if ($inventoryIndex) {
+                    $total += $inventoryIndex->qty;
+                }
+            }
+            return $total;
+        } else {
+            // Для простых товаров возвращаем количество из инвентаря
+            $inventoryIndex = $productTypeInstance->getInventoryIndex();
+            return $inventoryIndex ? $inventoryIndex->qty : 0;
+        }
     }
 }
