@@ -92,6 +92,7 @@ class ProductResource extends JsonResource
                 $product->type !== 'grouped',
                 $product->getTypeInstance()->showQuantityBox()
             ),
+            'quantity'              => $productTypeInstance->totalQuantity(),
         ];
 
         /* Добавляем цены для оптовых клиентов, если пользователь из оптовой группы */
